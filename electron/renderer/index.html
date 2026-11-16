@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; base-uri 'none'; form-action 'none'">
+  <title>IPA Runner</title>
+  <link rel="stylesheet" href="app.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="titlebar"><span class="brand-mark" aria-hidden="true"></span><span>IPA Runner</span></header>
+  <div class="shell">
+    <aside class="sidebar">
+      <nav aria-label="主导航">
+        <button class="nav-button" id="library-nav" aria-current="page"><span class="glyph library-glyph" aria-hidden="true"></span>应用库</button>
+        <button class="nav-button" id="settings-nav"><span class="glyph settings-glyph" aria-hidden="true"></span>运行时</button>
+      </nav>
+      <div class="connections" aria-label="运行时状态">
+        <div><span id="touchhle-dot" class="dot"></span><span>touchHLE</span><span id="touchhle-state" class="connection-state">—</span></div>
+        <div><span id="ios-dot" class="dot"></span><span>iOS 16</span><span id="ios-state" class="connection-state">—</span></div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section id="library-view" class="view library-view" aria-labelledby="library-title">
+        <div class="page-header">
+          <div><h1 id="library-title">应用库</h1><p class="caption" id="app-count">正在读取应用库…</p></div>
+          <button id="import-button" class="button primary"><span class="plus" aria-hidden="true">+</span>导入 IPA</button>
+        </div>
+        <div class="library-layout">
+          <div class="list-pane">
+            <label class="search"><span class="glyph search-glyph" aria-hidden="true"></span><span class="visually-hidden">搜索应用</span><input id="search" type="search" placeholder="搜索应用或 Bundle ID" autocomplete="off"></label>
+            <div class="list-heading" aria-hidden="true"><span>名称</span><span>运行时</span></div>
+            <div id="app-list" class="app-list" aria-label="应用列表"></div>
+            <div id="list-message" class="list-message" hidden></div>
+            <div class="drop-note" id="drop-note"><span class="glyph package-glyph" aria-hidden="true"></span><span>也可以把 <strong>.ipa</strong> 文件拖到这个窗口</span></div>
+          </div>
+          <aside id="details" class="details" aria-label="应用详情">
+            <p id="no-selection" class="empty-details">选择应用查看详情</p>
+            <div id="selected-details" hidden>
+              <div class="app-identity">
+                <div class="app-art" id="detail-icon" aria-hidden="true"></div>
+                <span id="runtime-tag" class="tag"></span>
+                <h2 id="app-name"></h2>
+                <p id="bundle-id" class="bundle"></p>
+              </div>
+              <div class="app-data">
+                <dl><div><dt>版本</dt><dd id="app-version"></dd></div><div><dt>架构</dt><dd id="app-arch"></dd></div><div><dt>最低 iOS</dt><dd id="minimum-os"></dd></div></dl>
+                <p id="app-status" class="app-status" role="status"></p>
+                <div id="display-options" class="display-options" hidden>
+                  <label for="display-mode">启动显示</label>
+                  <select id="display-mode"><option value="window">窗口</option><option value="large">放大窗口（2×）</option><option value="fullscreen">全屏</option></select>
+                  <p id="fullscreen-help" class="app-status" hidden>按 Alt + F4 关闭全屏游戏。</p>
+                </div>
+                <div class="app-actions"><button id="run-button" class="button primary"></button><button id="app-secondary" class="button secondary"></button></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="settings-view" class="view settings-view" aria-labelledby="settings-title" hidden>
+        <div class="page-header"><div><h1 id="settings-title">运行时</h1><p class="caption">设置用于打开 IPA 的本地运行环境。</p></div><button id="open-data" class="button secondary">打开数据目录</button></div>
+        <form id="settings-form" class="settings-form">
+          <fieldset><legend>touchHLE</legend><p>运行兼容的早期 32 位应用。</p>
+            <label for="touchhle">可执行文件</label><div class="path-select"><input id="touchhle" placeholder="选择 touchHLE.exe"><button type="button" class="button secondary" data-browse="touchhle">浏览</button></div>
+            <button type="button" class="link" data-download="touchhle">下载 touchHLE <span aria-hidden="true">↗</span></button>
+          </fieldset>
+          <fieldset><legend>ASoftware iOS 16</legend><p>将兼容的 ARM64 IPA 提交给 iOS 16 虚拟机。</p>
+            <label for="asoftware">安装目录</label><div class="path-select"><input id="asoftware" placeholder="包含 Start-iOS.cmd 的目录"><button type="button" class="button secondary" data-browse="asoftware">浏览</button></div>
+            <label for="asoftwareWork">自定义数据目录 <span class="muted">· 可选</span></label><div class="path-select"><input id="asoftwareWork" placeholder="默认使用安装目录下的 work"><button type="button" class="button secondary" data-browse="asoftwareWork">浏览</button></div>
+            <button type="button" class="link" data-download="asoftware">下载 ASoftware iOS <span aria-hidden="true">↗</span></button>
+          </fieldset>
+          <button id="save-settings" type="submit" class="button primary">保存设置</button>
+        </form>
+      </section>
+    </main>
+  </div>
+  <div class="drop-overlay" id="drop-overlay" hidden>松开鼠标以导入 IPA</div>
+  <div class="feedback" id="feedback" hidden><div id="notice" role="status"></div><button type="button" id="dismiss" aria-label="关闭通知">×</button></div>
+</body>
+</html>
