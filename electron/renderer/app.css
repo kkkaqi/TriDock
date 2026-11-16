@@ -36,9 +36,7 @@ h1, h2, p, dl, dd { margin: 0; }
   -webkit-app-region: drag;
   user-select: none;
 }
-.brand-mark { width: 20px; height: 20px; display: grid; place-items: center; position: relative; border-radius: 6px; background: var(--accent); }
-.brand-mark::before { content: ''; position: absolute; width: 9px; height: 12px; border: 1.5px solid white; border-radius: 2.5px; }
-.brand-mark::after { content: ''; width: 3px; height: 1px; margin-top: 7px; border-radius: 1px; background: white; }
+.brand-mark { display: block; border-radius: 5px; }
 
 .shell { height: calc(100vh - 42px); display: grid; grid-template-columns: 182px minmax(0, 1fr); }
 .sidebar { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; padding: 23px 13px 16px; border-right: 1px solid var(--line); background: #f7f8fc; }

@@ -1,0 +1,27 @@
+appId: com.kkkaqi.ipa-runner
+productName: IPA Runner
+electronDist: node_modules/electron/dist
+npmRebuild: false
+files:
+  - electron/**
+  - package.json
+extraResources:
+  - from: .build-cache/python-3.13.17
+    to: python
+  - from: .
+    to: python
+    filter:
+      - desktop_bridge.py
+      - ipa_runner.py
+      - ipa_icons.py
+win:
+  icon: electron/renderer/icon.png
+  signExecutable: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  runAfterFinish: false
+  createDesktopShortcut: true
+  deleteAppDataOnUninstall: false
+  artifactName: IPA-Runner-${version}-win-${arch}-Setup.${ext}

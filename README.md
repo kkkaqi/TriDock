@@ -4,6 +4,10 @@ IPA Runner 是一个 Windows 桌面启动器，用于管理 `.ipa` 安装包和�
 
 ## 快速开始
 
+从 [GitHub Releases](https://github.com/kkkaqi/ipa-runner/releases/latest) 下载 `IPA-Runner-*-win-x64-Setup.exe`，双击后在安装向导的目录页面选择安装位置。安装包已包含 Electron 和 Python。安装后从桌面或开始菜单打开 IPA Runner，再按下方第 3、4 步配置运行时和导入 IPA。
+
+从源码运行：
+
 1. 安装 **Node.js 22.12 或更新版本**和 **Python 3.10 或更新版本**，确保 `node`、`npm` 和 `python` 能在终端中运行。
 2. 下载本仓库源码，双击 `IPA Runner.cmd`。首次打开需要联网下载 Electron。也可以在项目目录运行 `npm ci`，然后运行 `npm start`。
 3. 下载并解压 [touchHLE Windows 版](https://github.com/touchHLE/touchHLE/releases)，在 IPA Runner 的 **运行时** 页选择 `touchHLE.exe` 并保存。
@@ -44,5 +48,7 @@ npm ci
 python -m unittest discover -s tests -v
 npm run test:desktop
 ```
+
+在 Windows x64 上运行 `npm run build:win` 可以生成安装包，成品位于 `dist`。首次构建需联网获取打包工具与 Python 嵌入包。
 
 Windows 应用启动器的交互设计参考了 [ApkStart](https://github.com/RoutineMiku/apkstart)。

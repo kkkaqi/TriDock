@@ -5,9 +5,11 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 const project = path.resolve(__dirname, '..');
+const backend = app.isPackaged ? path.join(process.resourcesPath, 'python') : project;
+const python = app.isPackaged ? path.join(backend, 'python.exe') : 'python.exe';
 const renderer = path.join(__dirname, 'renderer');
 const url = 'ipa-runner://desktop/index.html';
-const pages = new Set(['/index.html', '/app.js', '/app.css']);
+const pages = new Set(['/index.html', '/app.js', '/app.css', '/icon.png']);
 const smoke = process.argv.includes('--smoke');
 const minimum = { width: 660, height: 500 };
 const downloads = {
@@ -20,19 +22,19 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'ipa-runner', privileges: { stan
 
 function bridge(action, payload = {}) {
   return new Promise((resolve, reject) => {
-    const args = [path.join(project, 'desktop_bridge.py')];
+    const args = ['-X', 'utf8', path.join(backend, 'desktop_bridge.py')];
     if (smoke && process.env.IPA_RUNNER_SMOKE_DATA) args.push('--data-dir', process.env.IPA_RUNNER_SMOKE_DATA);
     args.push(action);
-    const child = execFile('python.exe', args, {
-      cwd: project,
+    const child = execFile(python, args, {
+      cwd: backend,
       windowsHide: true,
       encoding: 'utf8',
       timeout: 10 * 60 * 1000,
       maxBuffer: 16 * 1024 * 1024,
-      env: { ...process.env, PYTHONUTF8: '1' },
     }, (error, stdout, stderr) => {
       if (error) {
-        const message = error.code === 'ENOENT' ? '找不到 Python。请安装 Python 3.10 或更高版本。' : stderr.trim() || '后台进程未完成操作。';
+        const missingPython = app.isPackaged ? '找不到内置 Python，请重新安装 IPA Runner。' : '找不到 Python。请安装 Python 3.10 或更高版本。';
+        const message = error.code === 'ENOENT' ? missingPython : stderr.trim() || '后台进程未完成操作。';
         reject(new Error(message));
         return;
       }
@@ -137,6 +139,7 @@ async function createWindow() {
     minHeight: minimum.height,
     show: false,
     backgroundColor: '#f7f8fc',
+    icon: path.join(renderer, 'icon.png'),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#f7f8fc', symbolColor: '#383a52', height: 42 },
     autoHideMenuBar: true,
