@@ -8,6 +8,16 @@ async function call(action, value) {
 
 contextBridge.exposeInMainWorld('runner', {
   snapshot: () => call('snapshot'),
+  systems: () => call('system-snapshot'),
+  createSystem: values => call('system-create', values),
+  removeSystem: id => call('system-remove', { id }),
+  startSystem: id => call('system-start', { id }),
+  stopSystem: id => call('system-stop', { id }),
+  installPackage: (id, launch = false) => call('system-install', { id, launch }),
+  systemLog: id => call('system-log', id),
+  systemShortcut: id => call('system-shortcut', id),
+  browseSystem: kind => call('system-browse', kind),
+  importPackage: (id, file) => call('system-import', { id, path: file ? webUtils.getPathForFile(file) : '' }),
   pickIpa: () => call('import'),
   importFile: file => call('import', webUtils.getPathForFile(file)),
   icon: id => call('icon', id),

@@ -9,12 +9,14 @@ const backend = app.isPackaged ? path.join(process.resourcesPath, 'python') : pr
 const python = app.isPackaged ? path.join(backend, 'python.exe') : 'python.exe';
 const renderer = path.join(__dirname, 'renderer');
 const url = 'ipa-runner://desktop/index.html';
-const pages = new Set(['/index.html', '/app.js', '/app.css', '/icon.png']);
+const pages = new Set(['/index.html', '/app.js', '/systems.js', '/app.css', '/icon.png']);
 const smoke = process.argv.includes('--smoke');
 const minimum = { width: 660, height: 500 };
 const downloads = {
   touchhle: 'https://github.com/touchHLE/touchHLE/releases',
   asoftware: 'https://github.com/alpersamur3/asoft-ios/releases',
+  android: 'https://developer.android.com/studio/run/managing-avds',
+  openharmony: 'https://docs.oniroproject.org/device-development/developer-boards/emulator/',
 };
 
 app.setName('IPA Runner');
@@ -66,6 +68,52 @@ function registerHandlers() {
   }
 
   handle('snapshot', () => bridge('snapshot'));
+  for (const action of ['snapshot', 'create', 'remove', 'start', 'stop', 'install']) {
+    handle(`system-${action}`, (_event, payload) => bridge(`system-${action}`, payload));
+  }
+  handle('system-log', async (_event, id) => {
+    const file = await bridge('system-log', { id });
+    const error = await shell.openPath(file);
+    if (error) throw new Error('尚无日志，请先启动系统。');
+  });
+  handle('system-shortcut', async (_event, id) => {
+    const data = await bridge('system-snapshot');
+    const entry = data.packages.find(item => item.id === id);
+    if (!entry || !/^[a-f0-9]{64}$/.test(id)) throw new Error('找不到该应用记录。');
+    const instance = data.instances.find(item => item.id === entry.instance);
+    if (instance?.platform === 'ios') throw new Error('现代 iOS 应用请从系统桌面打开。');
+    const name = entry.name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/g, '').slice(0, 60) || 'App';
+    const folder = smoke && process.env.IPA_RUNNER_SMOKE_DATA ? process.env.IPA_RUNNER_SMOKE_DATA : app.getPath('desktop');
+    const file = path.join(folder, `${name} (Runner ${id.slice(0, 8)}).lnk`);
+    const details = { target: process.execPath, cwd: app.isPackaged ? path.dirname(process.execPath) : project, icon: process.execPath, iconIndex: 0,
+      args: `${app.isPackaged ? '' : `"${project}" `}--system-package=${id}`,
+      description: `通过 ${instance.name} 打开 ${entry.name}` };
+    if (!shell.writeShortcutLink(file, 'create', details)) throw new Error('无法创建桌面快捷方式。');
+    if (smoke && shell.readShortcutLink(file).args !== details.args) throw new Error('快捷方式参数校验失败。');
+    return '桌面快捷方式已创建。';
+  });
+  handle('system-browse', async (event, kind) => {
+    if (!['home', 'work', 'tool'].includes(kind)) throw new Error('未知目录类型。');
+    const { canceled, filePaths } = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+      title: kind === 'tool' ? '选择 hdc.exe' : '选择已准备的运行环境或数据目录',
+      properties: [kind === 'tool' ? 'openFile' : 'openDirectory'],
+      ...(kind === 'tool' ? { filters: [{ name: 'HDC', extensions: ['exe'] }] } : {}),
+    });
+    return canceled ? null : filePaths[0];
+  });
+  handle('system-import', async (event, values) => {
+    if (!values || typeof values.id !== 'string') throw new Error('请选择系统实例。');
+    let file = values.path;
+    if (!file) {
+      const { canceled, filePaths } = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+        title: '选择应用安装包', properties: ['openFile'],
+        filters: [{ name: '应用安装包', extensions: ['apk', 'ipa', 'hap'] }],
+      });
+      if (canceled) return null;
+      file = filePaths[0];
+    }
+    return bridge('system-import', { id: values.id, path: file });
+  });
   handle('import', async (event, dropPath) => {
     if (dropPath) return bridge('import', { path: dropPath });
     const owner = BrowserWindow.fromWebContents(event.sender);
@@ -120,6 +168,7 @@ async function verifyDrop(contents, ipa) {
     const input = document.querySelector('input[type=file]');
     const files = new DataTransfer();
     files.items.add(input.files[0]);
+    document.querySelector('#notice').textContent = '';
     document.dispatchEvent(new DragEvent('drop', { dataTransfer: files, cancelable: true }));
     input.remove();
     const deadline = Date.now() + 10000;
@@ -143,7 +192,7 @@ async function createWindow() {
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#f7f8fc', symbolColor: '#383a52', height: 42 },
     autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false },
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: !smoke },
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
@@ -151,10 +200,26 @@ async function createWindow() {
   if (smoke) {
     const checks = await window.webContents.executeJavaScript(`(async () => {
       const deadline = Date.now() + 10000;
-      while (document.body.dataset.ready !== 'true' && Date.now() < deadline) {
+      while ((document.body.dataset.ready !== 'true' || document.querySelector('#systems-view').dataset.ready !== 'true') && Date.now() < deadline) {
         await new Promise(resolve => setTimeout(resolve, 30));
       }
       const search = document.querySelector('#search');
+      document.querySelector('#systems-nav').click();
+      const systems = !document.querySelector('#systems-view').hidden;
+      document.querySelector('#new-system').click();
+      const form = !document.querySelector('#system-form').hidden;
+      const platform = document.querySelector('#system-platform');
+      platform.value = 'ios';
+      platform.dispatchEvent(new Event('change'));
+      const iosForm = document.querySelector('#system-resources').hidden && !document.querySelector('#system-work-row').hidden;
+      platform.value = 'openharmony';
+      platform.dispatchEvent(new Event('change'));
+      const harmonyForm = !document.querySelector('#system-tool-row').hidden && document.querySelector('#system-target-row').hidden;
+      platform.value = 'android';
+      platform.dispatchEvent(new Event('change'));
+      const androidForm = !document.querySelector('#system-target-row').hidden;
+      document.querySelector('#system-cancel').click();
+      document.querySelector('#library-nav').click();
       const count = document.querySelectorAll('.app-row').length;
       search.value = '__no_match_ipa__';
       search.dispatchEvent(new Event('input'));
@@ -164,10 +229,32 @@ async function createWindow() {
       document.querySelector('#settings-nav').click();
       const settings = !document.querySelector('#settings-view').hidden;
       document.querySelector('#library-nav').click();
-      return { ready: document.body.dataset.ready === 'true', count, filters, settings,
+      return { ready: document.body.dataset.ready === 'true', systems, form, iosForm, harmonyForm, androidForm, count, filters, settings,
         library: !document.querySelector('#library-view').hidden };
     })()`);
-    if (!checks.ready || !checks.filters || !checks.settings || !checks.library) throw new Error(JSON.stringify(checks));
+    if (!checks.ready || !checks.filters || !checks.settings || !checks.library || !checks.systems || !checks.form || !checks.iosForm || !checks.harmonyForm || !checks.androidForm) throw new Error(JSON.stringify(checks));
+    if (process.env.IPA_RUNNER_SMOKE_SYSTEM) {
+      const definition = JSON.parse(process.env.IPA_RUNNER_SMOKE_SYSTEM);
+      if (!process.env.IPA_RUNNER_SMOKE_DATA) throw new Error('System smoke requires a separate data directory.');
+      const systemResult = await window.webContents.executeJavaScript(`(async () => {
+        document.querySelector('#systems-nav').click();
+        document.querySelector('#new-system').click();
+        const values = ${JSON.stringify(definition)};
+        for (const key of ['platform', 'name', 'home', 'tool']) document.querySelector('#system-' + key).value = values[key];
+        document.querySelector('#system-platform').dispatchEvent(new Event('change'));
+        document.querySelector('#system-form').requestSubmit();
+        const deadline = Date.now() + 10000;
+        while (document.querySelector('#system-detail-name').textContent !== values.name && Date.now() < deadline) await new Promise(r => setTimeout(r, 50));
+        return document.querySelector('#system-detail-name').textContent;
+      })()`);
+      if (systemResult !== definition.name) throw new Error(`Instance creation failed: ${systemResult}`);
+      if (process.env.IPA_RUNNER_SMOKE_HAP) await verifyDrop(window.webContents, process.env.IPA_RUNNER_SMOKE_HAP);
+      await window.webContents.executeJavaScript(`(async () => {
+        const snapshot = await window.runner.systems();
+        if (!snapshot.packages.length) throw new Error('Missing package for shortcut smoke.');
+        await window.runner.systemShortcut(snapshot.packages[0].id);
+      })()`);
+    }
     const importPath = process.env.IPA_RUNNER_SMOKE_IMPORT;
     if (importPath) {
       if (!process.env.IPA_RUNNER_SMOKE_DATA) throw new Error('Set a separate smoke-test library before testing import.');
@@ -185,7 +272,9 @@ async function createWindow() {
       if (!saved) throw new Error('The display mode was not saved from the launcher.');
     }
     if (process.env.IPA_RUNNER_SMOKE_PNG) {
-      await window.webContents.executeJavaScript(`new Promise(resolve => setTimeout(resolve, 500))`);
+      await window.webContents.executeJavaScript(`document.querySelector('#systems-nav').click()`);
+      window.showInactive();
+      await window.webContents.executeJavaScript(`new Promise(resolve => setTimeout(resolve, 700))`);
       const image = await window.webContents.capturePage();
       await writeFile(process.env.IPA_RUNNER_SMOKE_PNG, image.toPNG());
     }
@@ -211,21 +300,30 @@ async function createWindow() {
       if (!launched.startsWith('已启动 ')) throw new Error(launched || 'The app did not report a launch result.');
       console.log(launched);
     }
-    console.log(`Electron smoke passed · ${checks.count} initial app(s) · search, navigation and layout`);
+    console.log(`Electron smoke passed · ${checks.count} initial app(s) · system forms, search, navigation and layout`);
     app.exit(0);
     return;
   }
   window.show();
+  void launchShortcut(process.argv);
+}
+
+async function launchShortcut(args) {
+  const id = args.map(value => /^--system-package=([a-f0-9]{64})$/.exec(value)?.[1]).find(Boolean);
+  if (!id) return;
+  try { await bridge('system-install', { id, launch: true }); }
+  catch (error) { dialog.showErrorBox('应用启动失败', error.message); }
 }
 
 if (!smoke && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     const window = BrowserWindow.getAllWindows()[0];
     if (!window) return;
     if (window.isMinimized()) window.restore();
     window.focus();
+    void launchShortcut(argv);
   });
   app.once('window-all-closed', () => app.quit());
   app.whenReady().then(async () => {

@@ -45,6 +45,8 @@ async function run(task) {
 }
 
 function view(settings) {
+  byId('systems-view').hidden = true;
+  byId('systems-nav').removeAttribute('aria-current');
   byId('settings-view').hidden = !settings;
   byId('library-view').hidden = settings;
   for (const [id, active] of [['settings-nav', settings], ['library-nav', !settings]]) {
@@ -278,12 +280,14 @@ byId('settings-form').addEventListener('submit', event => {
 const overlay = byId('drop-overlay');
 document.addEventListener('dragover', event => {
   event.preventDefault();
+  overlay.textContent = !byId('systems-view').hidden ? '松开鼠标以导入到当前系统实例' : '松开鼠标以导入 IPA';
   if (event.dataTransfer?.types.includes('Files') && !busy) overlay.hidden = false;
 });
 document.addEventListener('dragleave', event => {
   if (!event.relatedTarget) overlay.hidden = true;
 });
 document.addEventListener('drop', event => {
+  if (!byId('systems-view').hidden) return;
   event.preventDefault();
   overlay.hidden = true;
   const files = event.dataTransfer?.files;
@@ -294,7 +298,8 @@ document.addEventListener('keydown', event => {
   if (!event.ctrlKey || event.altKey || event.metaKey) return;
   if (event.key.toLowerCase() === 'o') {
     event.preventDefault();
-    doImport();
+    if (!byId('systems-view').hidden) byId('system-import').click();
+    else doImport();
   }
   if (event.key.toLowerCase() === 'f') {
     event.preventDefault();

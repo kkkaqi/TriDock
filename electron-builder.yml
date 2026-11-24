@@ -14,6 +14,7 @@ extraResources:
       - desktop_bridge.py
       - ipa_runner.py
       - ipa_icons.py
+      - system_manager.py
 win:
   icon: electron/renderer/icon.png
   signExecutable: false
