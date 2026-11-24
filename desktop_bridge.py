@@ -13,6 +13,7 @@ from zipfile import BadZipFile, ZipFile
 from ipa_icons import display_png
 from ipa_runner import APP_ROOT, ASoftware, Library, create_shortcut, start_legacy
 from system_manager import SystemManager
+from runtime_inspector import CATALOG, inspect_environment, inspect_archive, extract_environment
 
 
 def app_icon(app):
@@ -95,6 +96,14 @@ def confirm_started(process, log, display_name):
 
 
 def handle(library, action, payload):
+    if action == 'system-catalog':
+        return CATALOG
+    if action == 'system-inspect':
+        return inspect_environment(payload)
+    if action == 'system-archive':
+        return inspect_archive(payload['path'])
+    if action == 'system-extract':
+        return extract_environment(payload['path'], payload['destination'])
     if action.startswith('system-'):
         manager = SystemManager(library.root)
         if action == 'system-snapshot':
@@ -105,6 +114,8 @@ def handle(library, action, payload):
             return manager.remove(payload['id'])
         if action == 'system-start':
             return manager.start(payload['id'])
+        if action == 'system-probe':
+            return manager.probe(payload['id'])
         if action == 'system-stop':
             return manager.stop(payload['id'])
         if action == 'system-import':
@@ -154,7 +165,8 @@ def main():
     parser.add_argument('action', choices=('snapshot', 'import', 'save-settings', 'open-ios',
                                            'icon', 'status', 'enqueue', 'shortcut', 'launch', 'display-mode',
                                            'system-snapshot', 'system-create', 'system-remove', 'system-start',
-                                           'system-stop', 'system-import', 'system-install', 'system-log'))
+                                           'system-stop', 'system-import', 'system-install', 'system-log',
+                                           'system-catalog', 'system-inspect', 'system-archive', 'system-extract', 'system-probe'))
     args = parser.parse_args()
     try:
         value = handle(Library(args.data_dir), args.action, json.load(sys.stdin))

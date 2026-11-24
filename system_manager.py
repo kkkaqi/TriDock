@@ -17,6 +17,7 @@ from types import SimpleNamespace
 from zipfile import BadZipFile, ZipFile
 
 from ipa_runner import ASoftware, inspect_ipa, powershell_exe, NO_CONSOLE
+from runtime_inspector import inspect_environment
 
 PLATFORMS = {'android': '.apk', 'ios': '.ipa', 'openharmony': '.hap'}
 IDENTIFIER = re.compile(r'[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}\Z')
@@ -146,6 +147,11 @@ class SystemManager:
             return self._create(values)
 
     def _create(self, values):
+        if values.get('guided'):
+            report = inspect_environment(values)
+            if not report['canCreate']:
+                raise ValueError('；'.join(c['message'] for c in report['checks'] if c['level'] == 'error'))
+            values = dict(report['values'], guided=True)
         platform = values.get('platform')
         if platform not in PLATFORMS:
             raise ValueError('请选择 Android、iOS 或 OpenHarmony。')
@@ -164,6 +170,11 @@ class SystemManager:
         others = self.items('instances')
         item = dict(id=uuid.uuid4().hex, platform=platform, name=name, home=home,
                     memory=memory, cpus=cpus, pid=0, token='', tool='', target='', device='', work='')
+        if values.get('guided'):
+            item.update(guided=True, version=report['version'], architecture=report['architecture'])
+            for key in ('avdHome', 'runtimeQemu', 'kernel', 'disk', 'extraPaths'):
+                if values.get(key):
+                    item[key] = values[key]
         if platform == 'android':
             target = str(values.get('target', '')).strip()
             if not IDENTIFIER.fullmatch(target):
@@ -213,21 +224,34 @@ class SystemManager:
                     '-no-snapshot', '-no-boot-anim']
         if item['platform'] == 'ios':
             runtime = ASoftware(home, item['work'])
-            return [powershell_exe(), '-NoProfile', '-ExecutionPolicy', 'RemoteSigned', '-File',
+            args = [powershell_exe(), '-NoProfile', '-ExecutionPolicy', 'RemoteSigned', '-File',
                     str(runtime.launch_script), '-Persist', '-Work', str(runtime.work), '-IpaDir', str(runtime.queue)]
+            for key, flag in (('runtimeQemu', '-Qemu'), ('kernel', '-Kernel'), ('disk', '-Disk')):
+                if item.get(key):
+                    args.extend([flag, item[key]])
+            return args
         # Fixed script name and validated numeric arguments; never interpolate a user path into cmd code.
         return [os.environ.get('COMSPEC', 'cmd.exe'), '/d', '/c', 'run.bat', '--instance', item['target'],
                 '-m', f'{item["memory"]}M', '-s', str(item['cpus'])]
 
     def command(self, item, args, timeout=30):
         result = subprocess.run(args, cwd=item['home'], capture_output=True, encoding='utf-8', errors='replace',
-                                timeout=timeout, creationflags=NO_CONSOLE)
+                                timeout=timeout, creationflags=NO_CONSOLE, env=self.environment(item))
         output = (result.stdout + '\n' + result.stderr).strip()
         with self.log_path(item).open('a', encoding='utf-8') as log:
             log.write(f'\n[{time.strftime("%Y-%m-%d %H:%M:%S")}] {Path(args[0]).name}\n{output}\n')
         if result.returncode:
             raise ValueError(output[-2000:] or '操作失败，请查看实例日志。')
         return output
+
+    @staticmethod
+    def environment(item):
+        env = dict(os.environ)
+        if item.get('extraPaths'):
+            env['PATH'] = os.pathsep.join(item['extraPaths']) + os.pathsep + env.get('PATH', '')
+        if item.get('avdHome') and item['platform'] == 'android':
+            env['ANDROID_AVD_HOME'] = item['avdHome']
+        return env
 
     def start(self, instance_id):
         with self.operation_lock():
@@ -261,6 +285,13 @@ class SystemManager:
         if self.running(item):
             return item
         self.validate(item)
+        if item.get('guided'):
+            report = inspect_environment(item)
+            if not report['canCreate']:
+                raise ValueError('启动前检查未通过：' + '；'.join(c['message'] for c in report['checks'] if c['level'] == 'error'))
+            for key in ('runtimeQemu', 'kernel', 'disk', 'extraPaths'):
+                if report['values'].get(key):
+                    item[key] = report['values'][key]
         if item['platform'] != 'ios':
             ports = [int(item['device'].split('-')[1]), int(item['device'].split('-')[1]) + 1] if item['platform'] == 'android' else [int(item['device'].split(':')[1])]
             if any(port_open(port) for port in ports):
@@ -277,7 +308,7 @@ class SystemManager:
                 raise ValueError('找不到该 AVD。请先在 Android Studio 的设备管理器中下载镜像并创建虚拟设备。')
         with self.log_path(item).open('ab') as log:
             process = subprocess.Popen(self.start_command(item), cwd=item['home'], stdin=subprocess.DEVNULL,
-                                       stdout=log, stderr=subprocess.STDOUT, creationflags=NO_CONSOLE)
+                                       stdout=log, stderr=subprocess.STDOUT, creationflags=NO_CONSOLE, env=self.environment(item))
         token = process_identity(process.pid)
         try:
             code = process.wait(timeout=1)
@@ -327,6 +358,22 @@ class SystemManager:
                 pass
             time.sleep(2)
         raise ValueError('系统仍未就绪，请等待引导完成后重试。详细信息见实例日志。')
+
+    def probe(self, instance_id):
+        item = self.get(instance_id)
+        if not self.running(item):
+            return dict(state='stopped', message='系统进程已停止，请查看日志。')
+        if item['platform'] == 'ios':
+            return dict(state='unverified', message='iOS 进程运行中，请在系统窗口确认锁屏或桌面；未验证设备就绪。')
+        try:
+            if item['platform'] == 'openharmony':
+                self.command(item, [item['tool'], 'tconn', item['device']], timeout=5)
+            probe = ['shell', 'getprop', 'sys.boot_completed'] if item['platform'] == 'android' else ['shell', 'echo', 'runner-ready']
+            output = self.command(item, self.device_command(item, probe), timeout=5)
+            ready = output.strip() == ('1' if item['platform'] == 'android' else 'runner-ready')
+            return dict(state='ready' if ready else 'booting', message='目标设备已就绪。' if ready else '系统正在引导，设备尚未就绪。')
+        except (ValueError, OSError, subprocess.SubprocessError):
+            return dict(state='booting', message='系统进程运行中，设备尚未连接，请稍后重试。')
 
     def import_package(self, instance_id, path):
         item = self.get(instance_id)

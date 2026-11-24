@@ -15,6 +15,7 @@ extraResources:
       - ipa_runner.py
       - ipa_icons.py
       - system_manager.py
+      - runtime_inspector.py
 win:
   icon: electron/renderer/icon.png
   signExecutable: false

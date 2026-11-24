@@ -9,6 +9,11 @@ async function call(action, value) {
 contextBridge.exposeInMainWorld('runner', {
   snapshot: () => call('snapshot'),
   systems: () => call('system-snapshot'),
+  systemCatalog: () => call('system-catalog'),
+  inspectSystem: values => call('system-inspect', values),
+  inspectArchive: path => call('system-archive', { path }),
+  extractSystem: (path, destination) => call('system-extract', { path, destination }),
+  probeSystem: id => call('system-probe', { id }),
   createSystem: values => call('system-create', values),
   removeSystem: id => call('system-remove', { id }),
   startSystem: id => call('system-start', { id }),

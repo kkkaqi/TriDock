@@ -201,6 +201,26 @@ class SystemManagerTests(unittest.TestCase):
                 self.manager.start(item['id'])
             launch.assert_not_called()
 
+    def test_probe_does_not_claim_readiness_for_a_stopped_system(self):
+        item = self.android()
+        with patch.object(self.manager, 'running', return_value=False), patch.object(self.manager, 'command') as command:
+            self.assertEqual(self.manager.probe(item['id'])['state'], 'stopped')
+            command.assert_not_called()
+
+    def test_android_probe_requires_boot_completed(self):
+        item = self.android()
+        with patch.object(self.manager, 'running', return_value=True), patch.object(self.manager, 'command', return_value='0'):
+            self.assertEqual(self.manager.probe(item['id'])['state'], 'booting')
+        with patch.object(self.manager, 'running', return_value=True), patch.object(self.manager, 'command', return_value='1'):
+            self.assertEqual(self.manager.probe(item['id'])['state'], 'ready')
+
+    def test_ios_probe_remains_unverified_even_when_process_runs(self):
+        item = self.android()
+        item['platform'] = 'ios'
+        self.manager.save(item)
+        with patch.object(self.manager, 'running', return_value=True):
+            self.assertEqual(self.manager.probe(item['id'])['state'], 'unverified')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -29,25 +29,30 @@
         <div class="page-header"><div><h1 id="systems-title">系统实例</h1><p class="caption">Android · iOS · OpenHarmony</p></div><button id="new-system" class="button primary">添加系统</button></div>
         <p class="system-intro">系统镜像由你选择。导入本地运行环境，再将应用拖入对应实例。</p>
         <form id="system-form" class="settings-form" hidden>
-          <fieldset><legend>添加本地运行环境</legend>
+          <fieldset><legend>选择系统与来源</legend>
             <label for="system-platform">系统平台</label><select id="system-platform"><option value="android">Android · SDK Emulator</option><option value="ios">iOS · ASoftware</option><option value="openharmony">OpenHarmony · Oniro</option></select>
             <p id="system-help"></p><button id="system-download" class="link" type="button">打开下载与准备说明 ↗</button>
+            <p id="system-compatibility" class="caption"></p>
+            <div class="system-actions"><button id="system-zip" type="button" class="button secondary">导入 ZIP 压缩包</button></div>
+            <div id="system-archive-panel" class="inspection-panel" hidden><p id="system-archive-info"></p><button id="system-extract" type="button" class="button secondary">选择存放目录并解压</button></div>
             <label for="system-name">实例名称</label><input id="system-name" required maxlength="80" placeholder="例如：Android 测试机">
             <label for="system-home" id="system-home-label">运行环境目录</label><div class="path-select"><input id="system-home" required placeholder="选择已解压的目录"><button type="button" class="button secondary" data-system-browse="home">浏览</button></div>
-            <div id="system-target-row"><label for="system-target">AVD 名称</label><input id="system-target" placeholder="Android Studio 中已创建的虚拟设备名称"></div>
+            <div id="system-target-row"><label for="system-avd-choice">已识别的 Android 设备</label><select id="system-avd-choice" disabled><option value="">检查目录后自动列出 AVD</option></select><input id="system-target" type="hidden"><p class="caption">没有设备时，请先通过上方说明在 Android Studio 创建，再点击检查。</p></div>
             <div id="system-tool-row" hidden><label for="system-tool">OpenHarmony SDK 的 hdc.exe</label><div class="path-select"><input id="system-tool" placeholder="选择 hdc.exe"><button type="button" class="button secondary" data-system-browse="tool">浏览</button></div></div>
             <div id="system-work-row" hidden><label for="system-work">iOS 数据目录（可选）</label><div class="path-select"><input id="system-work" placeholder="默认使用运行环境下的 work"><button type="button" class="button secondary" data-system-browse="work">浏览</button></div></div>
             <div id="system-resources" class="system-resources"><label>内存（MB）<input id="system-memory" type="number" min="1024" max="65536" value="4096" step="256"></label><label>CPU 核心<input id="system-cpus" type="number" min="1" max="32" value="4"></label></div>
             <p class="caption">只记录目录位置，不复制镜像。系统首次启动会在运行环境中创建或更新用户数据，请预留磁盘空间。</p>
           </fieldset>
-          <div class="system-actions"><button id="system-save" class="button primary" type="submit">添加实例</button><button id="system-cancel" class="button secondary" type="button">取消</button></div>
+          <div class="system-actions"><button id="system-inspect" class="button primary" type="button">检查环境并自动配置</button><button id="system-cancel" class="button secondary" type="button">取消</button></div>
+          <section id="system-inspection" class="inspection-panel" aria-labelledby="inspection-title" hidden><h3 id="inspection-title">环境检查</h3><p id="system-inspection-summary" role="status"></p><ul id="system-checks" class="system-checks"></ul></section>
+          <div class="system-actions"><button id="system-save" class="button primary" type="submit" disabled>检查通过后创建实例</button><span id="system-check-hint" class="caption">创建前先检查环境；更改配置后需要重新检查。</span></div>
         </form>
         <p id="system-message" class="list-message" role="status">正在读取系统实例…</p>
         <div id="system-list" class="system-list" aria-label="系统实例列表"></div>
         <section id="system-detail" class="system-detail" hidden>
           <div class="page-header"><div><h2 id="system-detail-name"></h2><p id="system-detail-info" class="caption"></p></div><button id="system-import" class="button primary">导入应用</button></div>
           <p id="system-path" class="system-path"></p>
-          <div class="system-actions"><button id="system-start" class="button primary">启动系统</button><button id="system-stop" class="button secondary">关闭系统</button><button id="system-log" class="button secondary">查看日志</button><button id="system-remove" class="link">移除管理记录</button></div>
+          <div class="system-actions"><button id="system-start" class="button primary">启动系统</button><button id="system-probe" class="button secondary">检查设备就绪</button><button id="system-stop" class="button secondary">关闭系统</button><button id="system-log" class="button secondary">查看日志</button><button id="system-remove" class="link">移除管理记录</button></div>
           <p id="system-operation" class="app-status" role="status"></p>
           <h3 class="system-apps-title">实例应用</h3><p id="system-apps-empty" class="caption"></p><div id="system-packages"></div>
         </section>

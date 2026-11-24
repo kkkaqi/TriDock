@@ -31,7 +31,7 @@ function bridge(action, payload = {}) {
       cwd: backend,
       windowsHide: true,
       encoding: 'utf8',
-      timeout: 10 * 60 * 1000,
+      timeout: action === 'system-extract' ? 0 : 10 * 60 * 1000,
       maxBuffer: 16 * 1024 * 1024,
     }, (error, stdout, stderr) => {
       if (error) {
@@ -68,7 +68,7 @@ function registerHandlers() {
   }
 
   handle('snapshot', () => bridge('snapshot'));
-  for (const action of ['snapshot', 'create', 'remove', 'start', 'stop', 'install']) {
+  for (const action of ['snapshot', 'create', 'remove', 'start', 'stop', 'install', 'catalog', 'inspect', 'archive', 'extract', 'probe']) {
     handle(`system-${action}`, (_event, payload) => bridge(`system-${action}`, payload));
   }
   handle('system-log', async (_event, id) => {
@@ -93,11 +93,11 @@ function registerHandlers() {
     return '桌面快捷方式已创建。';
   });
   handle('system-browse', async (event, kind) => {
-    if (!['home', 'work', 'tool'].includes(kind)) throw new Error('未知目录类型。');
+    if (!['home', 'work', 'tool', 'archive', 'destination'].includes(kind)) throw new Error('未知目录类型。');
     const { canceled, filePaths } = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
-      title: kind === 'tool' ? '选择 hdc.exe' : '选择已准备的运行环境或数据目录',
-      properties: [kind === 'tool' ? 'openFile' : 'openDirectory'],
-      ...(kind === 'tool' ? { filters: [{ name: 'HDC', extensions: ['exe'] }] } : {}),
+      title: { tool: '选择 hdc.exe', archive: '选择完整运行环境 ZIP', destination: '选择解压存放目录（将新建子目录）' }[kind] || '选择已准备的运行环境或数据目录',
+      properties: [['tool', 'archive'].includes(kind) ? 'openFile' : 'openDirectory'],
+      ...(['tool', 'archive'].includes(kind) ? { filters: [{ name: kind === 'tool' ? 'HDC' : 'ZIP', extensions: [kind === 'tool' ? 'exe' : 'zip'] }] } : {}),
     });
     return canceled ? null : filePaths[0];
   });
@@ -236,12 +236,41 @@ async function createWindow() {
     if (process.env.IPA_RUNNER_SMOKE_SYSTEM) {
       const definition = JSON.parse(process.env.IPA_RUNNER_SMOKE_SYSTEM);
       if (!process.env.IPA_RUNNER_SMOKE_DATA) throw new Error('System smoke requires a separate data directory.');
+      if (process.env.IPA_RUNNER_SMOKE_RUNTIME_ZIP) {
+        const zip = process.env.IPA_RUNNER_SMOKE_RUNTIME_ZIP;
+        const destination = process.env.IPA_RUNNER_SMOKE_DESTINATION;
+        definition.home = await window.webContents.executeJavaScript(`(async () => {
+          const info = await window.runner.inspectArchive(${JSON.stringify(zip)});
+          if (info.platform !== 'openharmony' || info.files < 8) throw new Error('Archive recognition failed.');
+          return window.runner.extractSystem(${JSON.stringify(zip)}, ${JSON.stringify(destination)});
+        })()`);
+        definition.tool = '';
+      }
       const systemResult = await window.webContents.executeJavaScript(`(async () => {
         document.querySelector('#systems-nav').click();
         document.querySelector('#new-system').click();
         const values = ${JSON.stringify(definition)};
         for (const key of ['platform', 'name', 'home', 'tool']) document.querySelector('#system-' + key).value = values[key];
+        for (const key of ['work', 'tool', 'target']) document.querySelector('#system-' + key).value = '__previous_environment__';
+        document.querySelector('#system-home').dispatchEvent(new Event('input'));
+        if (['work', 'tool', 'target'].some(key => document.querySelector('#system-' + key).value)) throw new Error('Changing source must clear previous environment paths.');
+        document.querySelector('#system-tool').value = values.tool;
         document.querySelector('#system-platform').dispatchEvent(new Event('change'));
+        if (!document.querySelector('#system-save').disabled) throw new Error('Create must be disabled before inspection.');
+        document.querySelector('#system-inspect').click();
+        const checkDeadline = Date.now() + 15000;
+        while (document.querySelector('#system-save').disabled && Date.now() < checkDeadline) await new Promise(r => setTimeout(r, 50));
+        if (document.querySelector('#system-save').disabled) throw new Error(document.querySelector('#system-inspection-summary').textContent + document.querySelector('#system-checks').textContent);
+        const name = document.querySelector('#system-name');
+        name.value += 'x';
+        name.dispatchEvent(new Event('input'));
+        if (!document.querySelector('#system-save').disabled) throw new Error('Editing must invalidate inspection.');
+        name.value = values.name;
+        name.dispatchEvent(new Event('input'));
+        document.querySelector('#system-inspect').click();
+        const recheckDeadline = Date.now() + 15000;
+        while (document.querySelector('#system-save').disabled && Date.now() < recheckDeadline) await new Promise(r => setTimeout(r, 50));
+        if (document.querySelector('#system-save').disabled) throw new Error('Recheck did not pass.');
         document.querySelector('#system-form').requestSubmit();
         const deadline = Date.now() + 10000;
         while (document.querySelector('#system-detail-name').textContent !== values.name && Date.now() < deadline) await new Promise(r => setTimeout(r, 50));
@@ -272,6 +301,19 @@ async function createWindow() {
       if (!saved) throw new Error('The display mode was not saved from the launcher.');
     }
     if (process.env.IPA_RUNNER_SMOKE_PNG) {
+      if (process.env.IPA_RUNNER_SMOKE_SYSTEM) {
+        await window.webContents.executeJavaScript(`(async () => {
+          document.querySelector('#new-system').click();
+          document.querySelector('#system-inspect').click();
+          const deadline = Date.now() + 10000;
+          while (document.querySelector('#system-inspect').disabled && Date.now() < deadline) await new Promise(r => setTimeout(r, 50));
+          document.querySelector('#system-inspection').scrollIntoView({ block: 'start' });
+        })()`);
+        window.showInactive();
+        await window.webContents.executeJavaScript(`new Promise(resolve => setTimeout(resolve, 500))`);
+        await writeFile(process.env.IPA_RUNNER_SMOKE_PNG.replace(/\.png$/i, '-wizard.png'), (await window.webContents.capturePage()).toPNG());
+        await window.webContents.executeJavaScript(`document.querySelector('#system-cancel').click()`);
+      }
       await window.webContents.executeJavaScript(`document.querySelector('#systems-nav').click()`);
       window.showInactive();
       await window.webContents.executeJavaScript(`new Promise(resolve => setTimeout(resolve, 700))`);

@@ -28,6 +28,13 @@
 #system-form input, #system-form select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: white; }
 #system-form label { display: block; margin: 16px 0 7px; }
 #system-form p { line-height: 1.7; margin: 14px 0; }
+.inspection-panel { padding: 18px; border: 1px solid var(--line); border-radius: 9px; margin: 18px 0; background: #fafafd; }
+.inspection-panel h3 { font-size: 1rem; margin: 0; }
+.system-checks { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px; }
+.system-checks li { overflow-wrap: anywhere; line-height: 1.6; }
+.check-pass { color: #236044; }
+.check-error { color: #a02739; }
+.check-warning { color: #785311; }
 
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }

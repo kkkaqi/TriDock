@@ -60,7 +60,7 @@ function updateConnections() {
   const { runtimes } = library;
   for (const [id, ready] of [['touchhle', runtimes.touchhleReady], ['ios', runtimes.asoftwareReady]]) {
     byId(`${id}-dot`).classList.toggle('connected', ready);
-    byId(`${id}-state`).textContent = ready ? '已连接' : '未连接';
+    byId(`${id}-state`).textContent = ready ? '已配置' : '未配置';
   }
   for (const key of fields) byId(key).value = runtimes[key];
 }
