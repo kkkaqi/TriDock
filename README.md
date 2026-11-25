@@ -1,6 +1,8 @@
-# IPA Runner
+# TriDock（三栖）
 
-IPA Runner 是一个 Windows 桌面启动器，用于管理 `.ipa` 安装包和启动兼容的 iOS 应用。桌面界面使用 Electron，IPA 解析、应用库和运行时调用由 Python 负责。`.ipa` 是 iOS 应用的安装包格式。
+TriDock（三栖）是一个 Windows 多系统运行环境管理器，用于管理 Android、iOS、OpenHarmony 实例及其 APK、IPA、HAP 应用包。桌面界面使用 Electron，应用库、环境检查和运行时调用由 Python 负责。
+
+0.4.1 将原 IPA Runner 更名为 TriDock（三栖），更新软件、窗口、EXE、安装器及桌面快捷方式图标。原数据目录和安装升级身份保持兼容。GitHub 仓库地址暂沿用原地址。
 
 ## 0.4 导入向导
 
@@ -36,13 +38,13 @@ OpenHarmony 的完整目录还需包含 ramdisk.img、updater.img、vendor.img�
 
 ## 快速开始
 
-从 [GitHub Releases](https://github.com/kkkaqi/ipa-runner/releases/latest) 下载 `IPA-Runner-*-win-x64-Setup.exe`，双击后在安装向导的目录页面选择安装位置。安装包已包含 Electron 和 Python。安装后从桌面或开始菜单打开 IPA Runner，再按下方第 3、4 步配置运行时和导入 IPA。
+从 [GitHub Releases](https://github.com/kkkaqi/ipa-runner/releases/latest) 获取已发布版本，或使用本地构建的 `TriDock-*-win-x64-Setup.exe`，双击后在安装向导中选择安装位置。安装包包含 Electron 和 Python，不包含系统镜像。安装后从桌面或开始菜单打开 TriDock（三栖），通过“添加系统”导入运行环境。
 
 从源码运行：
 
 1. 安装 **Node.js 22.12 或更新版本**和 **Python 3.10 或更新版本**，确保 `node`、`npm` 和 `python` 能在终端中运行。
-2. 下载本仓库源码，双击 `IPA Runner.cmd`。首次打开需要联网下载 Electron。也可以在项目目录运行 `npm ci`，然后运行 `npm start`。
-3. 下载并解压 [touchHLE Windows 版](https://github.com/touchHLE/touchHLE/releases)，在 IPA Runner 的 **运行时** 页选择 `touchHLE.exe` 并保存。
+2. 下载本仓库源码，双击 `TriDock.cmd`。首次打开需要联网下载 Electron。也可以在项目目录运行 `npm ci`，然后运行 `npm start`。旧 `IPA Runner.cmd` 作为兼容入口保留。
+3. 若要使用早期 iOS 应用，下载并解压 [touchHLE Windows 版](https://github.com/touchHLE/touchHLE/releases)，在 TriDock 的 **运行时** 页选择 `touchHLE.exe` 并保存。
 4. 在 **应用库** 点击 **导入 IPA**，或将 `.ipa` 拖到窗口。选中应用后点击 **启动应用**。可以用 [touchHLE 授权归档](https://touchhle.org/app-archive/)中的《Touch & Go LITE》1.2 试玩。
 
 运行时和试玩 IPA 需单独获取。应用库会读取应用名称、图标（可提取时）、Bundle ID、版本、架构和最低 iOS 版本。重新导入同一个 Bundle ID 会更新应用条目。
@@ -72,6 +74,12 @@ OpenHarmony 的完整目录还需包含 ramdisk.img、updater.img、vendor.img�
 ## 本地数据
 
 应用库、导入的 IPA 副本、显示设置和日志保存在 `%USERPROFILE%\Saved Games\IPA Runner`。在 **运行时** 页点击 **打开数据目录** 即可查看。桌面快捷方式指向当前源码位置，移动项目后需要重新创建。
+
+此目录名为兼容旧版本保留，改名升级不会迁移或删除其中的数据。
+
+## 图标源文件
+
+`electron/renderer/icon.svg` 是可编辑源文件。运行 `npm run build:icon` 使用 Electron 渲染 PNG 与 Windows 多尺寸 ICO；成品用于标题栏、窗口、任务栏、EXE 和 NSIS 安装器。
 
 ## 开发与测试
 

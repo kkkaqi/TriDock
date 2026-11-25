@@ -19,7 +19,9 @@ const downloads = {
   openharmony: 'https://docs.oniroproject.org/device-development/developer-boards/emulator/',
 };
 
-app.setName('IPA Runner');
+app.setName('TriDock（三栖）');
+// Keep the existing Electron profile and Python library across the product rename.
+app.setPath('userData', path.join(app.getPath('appData'), 'IPA Runner'));
 protocol.registerSchemesAsPrivileged([{ scheme: 'ipa-runner', privileges: { standard: true, secure: true } }]);
 
 function bridge(action, payload = {}) {
@@ -35,7 +37,7 @@ function bridge(action, payload = {}) {
       maxBuffer: 16 * 1024 * 1024,
     }, (error, stdout, stderr) => {
       if (error) {
-        const missingPython = app.isPackaged ? '找不到内置 Python，请重新安装 IPA Runner。' : '找不到 Python。请安装 Python 3.10 或更高版本。';
+        const missingPython = app.isPackaged ? '找不到内置 Python，请重新安装 TriDock（三栖）。' : '找不到 Python。请安装 Python 3.10 或更高版本。';
         const message = error.code === 'ENOENT' ? missingPython : stderr.trim() || '后台进程未完成操作。';
         reject(new Error(message));
         return;
@@ -187,6 +189,7 @@ async function createWindow() {
     minWidth: minimum.width,
     minHeight: minimum.height,
     show: false,
+    title: 'TriDock（三栖）',
     backgroundColor: '#f7f8fc',
     icon: path.join(renderer, 'icon.png'),
     titleBarStyle: 'hidden',
@@ -229,10 +232,11 @@ async function createWindow() {
       document.querySelector('#settings-nav').click();
       const settings = !document.querySelector('#settings-view').hidden;
       document.querySelector('#library-nav').click();
-      return { ready: document.body.dataset.ready === 'true', systems, form, iosForm, harmonyForm, androidForm, count, filters, settings,
+      const branding = document.title === 'TriDock（三栖）' && document.querySelector('.titlebar').textContent.includes('TriDock（三栖）');
+      return { branding, ready: document.body.dataset.ready === 'true', systems, form, iosForm, harmonyForm, androidForm, count, filters, settings,
         library: !document.querySelector('#library-view').hidden };
     })()`);
-    if (!checks.ready || !checks.filters || !checks.settings || !checks.library || !checks.systems || !checks.form || !checks.iosForm || !checks.harmonyForm || !checks.androidForm) throw new Error(JSON.stringify(checks));
+    if (!checks.branding || !checks.ready || !checks.filters || !checks.settings || !checks.library || !checks.systems || !checks.form || !checks.iosForm || !checks.harmonyForm || !checks.androidForm) throw new Error(JSON.stringify(checks));
     if (process.env.IPA_RUNNER_SMOKE_SYSTEM) {
       const definition = JSON.parse(process.env.IPA_RUNNER_SMOKE_SYSTEM);
       if (!process.env.IPA_RUNNER_SMOKE_DATA) throw new Error('System smoke requires a separate data directory.');
@@ -379,7 +383,7 @@ if (!smoke && !app.requestSingleInstanceLock()) {
     await createWindow();
   }).catch(error => {
     if (smoke) console.error(error);
-    else dialog.showErrorBox('IPA Runner', error.message);
+    else dialog.showErrorBox('TriDock（三栖）', error.message);
     app.exit(1);
   });
 }

@@ -34,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix='runner-system-smoke-') as directory:
                IPA_RUNNER_SMOKE_HAP=str(package),
                IPA_RUNNER_SMOKE_RUNTIME_ZIP=str(runtime_zip), IPA_RUNNER_SMOKE_DESTINATION=str(destination),
                IPA_RUNNER_SMOKE_PNG=str(ROOT / '.build-cache' / 'system-manager-smoke.png'))
-    command = [str(ROOT / 'dist' / 'win-unpacked' / 'IPA Runner.exe'), '--smoke'] if '--packaged' in sys.argv else [
+    command = [str(ROOT / 'dist' / 'win-unpacked' / 'TriDock.exe'), '--smoke'] if '--packaged' in sys.argv else [
         'node', str(ROOT / 'node_modules' / 'electron' / 'cli.js'), '.', '--smoke']
     result = subprocess.run(command,
                             cwd=ROOT, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=90)

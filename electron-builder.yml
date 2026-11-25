@@ -1,5 +1,6 @@
 appId: com.kkkaqi.ipa-runner
-productName: IPA Runner
+productName: TriDock（三栖）
+executableName: TriDock
 electronDist: node_modules/electron/dist
 npmRebuild: false
 files:
@@ -17,7 +18,7 @@ extraResources:
       - system_manager.py
       - runtime_inspector.py
 win:
-  icon: electron/renderer/icon.png
+  icon: electron/renderer/icon.ico
   signExecutable: false
 nsis:
   oneClick: false
@@ -26,4 +27,6 @@ nsis:
   runAfterFinish: false
   createDesktopShortcut: true
   deleteAppDataOnUninstall: false
-  artifactName: IPA-Runner-${version}-win-${arch}-Setup.${ext}
+  installerIcon: electron/renderer/icon.ico
+  uninstallerIcon: electron/renderer/icon.ico
+  artifactName: TriDock-${version}-win-${arch}-Setup.${ext}

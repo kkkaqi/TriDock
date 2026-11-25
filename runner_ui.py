@@ -29,7 +29,7 @@ class RunnerWindow:
         self.name = tk.StringVar()
         self.details = tk.StringVar()
         self.app_status = tk.StringVar()
-        self.root.title('IPA Runner')
+        self.root.title('TriDock（三栖）')
         self.root.geometry('940x540')
         self.root.minsize(780, 480)
         self.root.configure(bg=BACKGROUND)
@@ -55,7 +55,7 @@ class RunnerWindow:
 
         header = tk.Frame(self.root, bg=INK, padx=26, pady=18)
         header.pack(fill='x')
-        tk.Label(header, bg=INK, fg=PAPER, text='IPA Runner', font=('Segoe UI', 23, 'bold')).pack(side='left')
+        tk.Label(header, bg=INK, fg=PAPER, text='TriDock（三栖）', font=('Segoe UI', 23, 'bold')).pack(side='left')
         ttk.Button(header, text='运行时设置', command=self.settings).pack(side='right')
         self.import_button = ttk.Button(header, text='导入 IPA', style='Accent.TButton', command=self.import_ipa)
         self.import_button.pack(side='right', padx=(0, 10))
@@ -236,7 +236,7 @@ class RunnerWindow:
                 done(result)
             else:
                 self.notice.set('操作失败')
-                messagebox.showerror('IPA Runner', str(error), parent=self.root)
+                messagebox.showerror('TriDock（三栖）', str(error), parent=self.root)
             self.show_selection()
         self.root.after(150, self.poll_tasks)
 

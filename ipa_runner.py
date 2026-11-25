@@ -265,7 +265,7 @@ def create_shortcut(library, app):
     pythonw = Path(sys.executable).with_name('pythonw.exe')
     target = pythonw if pythonw.is_file() else Path(sys.executable)
     args = subprocess.list2cmdline([str(SCRIPT), '--data-dir', str(library.root), '--launch', app.bundle_id])
-    environment = dict(os.environ, IPARUNNER_NAME=f'{name} (IPA Runner {suffix}).lnk',
+    environment = dict(os.environ, IPARUNNER_NAME=f'{name} (TriDock {suffix}).lnk',
                        IPARUNNER_TARGET=str(target), IPARUNNER_ARGS=args,
                        IPARUNNER_ICON=str(library.touchhle() or target))
     script = ('$ErrorActionPreference = "Stop"\n'
@@ -281,7 +281,7 @@ def create_shortcut(library, app):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Windows IPA Runner')
+    parser = argparse.ArgumentParser(description='TriDock（三栖） Windows 多系统运行环境管理器')
     parser.add_argument('--data-dir', type=Path, default=APP_ROOT)
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument('--import', dest='import_path', type=Path)
@@ -311,7 +311,7 @@ def main():
             print(str(error), file=sys.stderr)
         else:
             import ctypes
-            ctypes.windll.user32.MessageBoxW(None, str(error), 'IPA Runner', 0x10)
+            ctypes.windll.user32.MessageBoxW(None, str(error), 'TriDock（三栖）', 0x10)
         return 1
 
 

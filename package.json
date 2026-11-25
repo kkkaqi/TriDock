@@ -1,8 +1,8 @@
 {
-  "name": "ipa-runner",
-  "version": "0.4.0",
+  "name": "tridock",
+  "version": "0.4.1",
   "private": true,
-  "productName": "IPA Runner",
+  "productName": "TriDock（三栖）",
   "description": "Image-free Windows manager for Android, iOS and OpenHarmony test environments",
   "author": "kkkaqi",
   "main": "electron/main.cjs",
@@ -10,6 +10,7 @@
     "start": "electron .",
     "test:desktop": "electron . --smoke",
     "test:systems": "python scripts/smoke_systems.py",
+    "build:icon": "electron scripts/build_icon.cjs",
     "build:win": "python scripts/prepare_python.py && install-electron && electron-builder --win nsis --x64 --publish never"
   },
   "devDependencies": {
