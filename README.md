@@ -2,7 +2,7 @@
 
 TriDock（三栖）是一个 Windows 多系统运行环境管理器，用于管理 Android、iOS、OpenHarmony 实例及其 APK、IPA、HAP 应用包。桌面界面使用 Electron，应用库、环境检查和运行时调用由 Python 负责。
 
-0.4.1 将原 IPA Runner 更名为 TriDock（三栖），更新软件、窗口、EXE、安装器及桌面快捷方式图标。原数据目录和安装升级身份保持兼容。GitHub 仓库地址暂沿用原地址。
+0.4.1 将原 IPA Runner 更名为 TriDock（三栖），更新软件、窗口、EXE、安装器及桌面快捷方式图标。原数据目录和安装升级身份保持兼容。GitHub 仓库已同步更名为 [kkkaqi/TriDock](https://github.com/kkkaqi/TriDock)。
 
 ## 0.4 导入向导
 
@@ -38,7 +38,7 @@ OpenHarmony 的完整目录还需包含 ramdisk.img、updater.img、vendor.img�
 
 ## 快速开始
 
-从 [GitHub Releases](https://github.com/kkkaqi/ipa-runner/releases/latest) 获取已发布版本，或使用本地构建的 `TriDock-*-win-x64-Setup.exe`，双击后在安装向导中选择安装位置。安装包包含 Electron 和 Python，不包含系统镜像。安装后从桌面或开始菜单打开 TriDock（三栖），通过“添加系统”导入运行环境。
+从 [GitHub Releases](https://github.com/kkkaqi/TriDock/releases/latest) 获取已发布版本，或使用本地构建的 `TriDock-*-win-x64-Setup.exe`，双击后在安装向导中选择安装位置。安装包包含 Electron 和 Python，不包含系统镜像。安装后从桌面或开始菜单打开 TriDock（三栖），通过“添加系统”导入运行环境。
 
 从源码运行：
 
